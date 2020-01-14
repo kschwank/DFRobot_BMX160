@@ -30,6 +30,7 @@ THE SOFTWARE.
 ===============================================
 */
 #include "DFRobot_BMX160.h"
+#include "Wire.h"
 
 DFRobot_BMX160::DFRobot_BMX160()
 {
@@ -55,9 +56,10 @@ const uint8_t int_mask_lookup_table[13] = {
     BMX160_INT2_FIFO_WM_MASK
 };
 
-bool DFRobot_BMX160::begin()
+bool DFRobot_BMX160::begin(TwoWire *theWire)
 {
-    Wire.begin();
+    wire = theWire;
+    wire->begin();
     if (scan() == true){
         softReset();
         writeBmxReg(BMX160_COMMAND_REG_ADDR, 0x11);
@@ -263,32 +265,32 @@ void DFRobot_BMX160::writeBmxReg(uint8_t reg, uint8_t value)
 
 void DFRobot_BMX160::writeReg(uint8_t reg, uint8_t *pBuf, uint16_t len)
 {
-    Wire.begin();
-    Wire.beginTransmission(_addr);
-    Wire.write(reg);
+    wire->begin();
+    wire->beginTransmission(_addr);
+    wire->write(reg);
     for(uint16_t i = 0; i < len; i ++)
-        Wire.write(pBuf[i]);
-    Wire.endTransmission();
+        wire->write(pBuf[i]);
+    wire->endTransmission();
 }
 
 void DFRobot_BMX160::readReg(uint8_t reg, uint8_t *pBuf, uint16_t len)
 {
-    Wire.begin();
-    Wire.beginTransmission(_addr);
-    Wire.write(reg);
-    if(Wire.endTransmission() != 0)
+    wire->begin();
+    wire->beginTransmission(_addr);
+    wire->write(reg);
+    if(wire->endTransmission() != 0)
         return;
-    Wire.requestFrom(_addr, (uint8_t) len);
+    wire->requestFrom(_addr, (uint8_t) len);
     for(uint16_t i = 0; i < len; i ++) {
-        pBuf[i] = Wire.read();
+        pBuf[i] = wire->read();
     }
-    Wire.endTransmission();
+    wire->endTransmission();
 }
 
 bool DFRobot_BMX160::scan()
 {
-    Wire.beginTransmission(_addr);
-    if (Wire.endTransmission() == 0){
+    wire->beginTransmission(_addr);
+    if (wire->endTransmission() == 0){
         return true;
     }
     return false;

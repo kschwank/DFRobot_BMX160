@@ -1205,6 +1205,9 @@ typedef enum{
 }eAccelRange_t;
 
 class DFRobot_BMX160{
+  protected:
+    TwoWire *wire;
+
   public:
     DFRobot_BMX160();
     
@@ -1212,7 +1215,7 @@ class DFRobot_BMX160{
      * @brief set the i2c addr and init the i2c.
      * @return ture means success
      */
-    bool begin();
+    bool begin(TwoWire *theWire = &Wire);
     
     void setGyroRange(eGyroRange_t bits);
     void setAccelRange(eAccelRange_t bits);
