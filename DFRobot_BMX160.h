@@ -30,6 +30,9 @@ THE SOFTWARE.
 ===============================================
 */
 
+#ifndef DFROBOT_BMX160_H
+#define DFROBOT_BMX160_H
+
 #include<Arduino.h>
 #include<Wire.h>
 #include<SPI.h>
@@ -1246,3 +1249,4 @@ class DFRobot_BMX160{
     bool scan();
 };
 
+#endif
