@@ -33,11 +33,21 @@ THE SOFTWARE.
 #ifndef DFROBOT_BMX160_H
 #define DFROBOT_BMX160_H
 
-#include<Arduino.h>
-#include<Wire.h>
-#include<SPI.h>
+#include "Arduino.h"
+#include <Wire.h>
+#include <SPI.h>
+
+#include <Adafruit_Sensor.h>
+#include <utility/imumaths.h>
 
 #define LITTLE_ENDIAN 1
+
+/** BMX160 Address A **/
+#define BMX160_ADDRESS_A (0x68)
+/** BMX160 Address B **/
+#define BMX160_ADDRESS_B (0x69)
+/** BMX160_ID **/
+#define BMX160_ID (0xD8)
 
 /** Mask definitions */
 #define BMX160_ACCEL_BW_MASK                     0x70
@@ -1204,18 +1214,20 @@ typedef enum{
     eAccelRange_16G
 }eAccelRange_t;
 
-class DFRobot_BMX160{
+class DFRobot_BMX160 {
   protected:
-    TwoWire *wire;
+    int32_t _sensorID;
+    uint8_t _address;
+    TwoWire *_wire;
 
   public:
-    DFRobot_BMX160();
+    DFRobot_BMX160(int32_t sensorID = -1, uint8_t address = BMX160_ADDRESS_A, TwoWire *theWire = &Wire);
     
     /*
      * @brief set the i2c addr and init the i2c.
      * @return ture means success
      */
-    bool begin(TwoWire *theWire = &Wire);
+    bool begin();
     
     void setGyroRange(eGyroRange_t bits);
     void setAccelRange(eAccelRange_t bits);
@@ -1250,6 +1262,16 @@ class DFRobot_BMX160{
     int8_t readBmxReg(uint8_t reg);
     void writeBmxReg(uint8_t reg, uint8_t value);
     bool scan();
+};
+
+class Adafruit_BMX160 : public Adafruit_Sensor, public DFRobot_BMX160 {
+public:
+    Adafruit_BMX160(int32_t sensorID = -1, uint8_t address = BMX160_ADDRESS_A, TwoWire *theWire = &Wire);
+
+    /* Adafruit Sensor implementation */
+    void enableAutoRange(bool enabled);
+    bool getEvent(sensors_event_t *);
+    void getSensor(sensor_t *);
 };
 
 #endif

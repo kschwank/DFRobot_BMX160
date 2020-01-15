@@ -32,8 +32,14 @@ THE SOFTWARE.
 #include "DFRobot_BMX160.h"
 #include "Wire.h"
 
-DFRobot_BMX160::DFRobot_BMX160()
+#include "Adafruit_Sensor.h"
+
+DFRobot_BMX160::DFRobot_BMX160(int32_t sensorID, uint8_t address, TwoWire *theWire)
 {
+  _sensorID = sensorID;
+  _address = address;
+  _wire = theWire;
+
   Obmx160 = (struct bmx160Dev *)malloc(sizeof(struct bmx160Dev));
   Oaccel = (struct bmx160SensorData*)malloc(sizeof(struct bmx160SensorData));
   Ogyro = (struct bmx160SensorData*)malloc(sizeof(struct bmx160SensorData));
@@ -56,10 +62,9 @@ const uint8_t int_mask_lookup_table[13] = {
     BMX160_INT2_FIFO_WM_MASK
 };
 
-bool DFRobot_BMX160::begin(TwoWire *theWire)
+bool DFRobot_BMX160::begin()
 {
-    wire = theWire;
-    wire->begin();
+    _wire->begin();
     if (scan() == true){
         softReset();
         writeBmxReg(BMX160_COMMAND_REG_ADDR, 0x11);
@@ -254,7 +259,7 @@ int8_t DFRobot_BMX160::readBmxReg(uint8_t reg)
     uint8_t buf[1] = {0};
     
     readReg(reg, buf, sizeof(buf));
-    return buf[1];
+    return buf[0];
 }
 
 void DFRobot_BMX160::writeBmxReg(uint8_t reg, uint8_t value)
@@ -265,33 +270,82 @@ void DFRobot_BMX160::writeBmxReg(uint8_t reg, uint8_t value)
 
 void DFRobot_BMX160::writeReg(uint8_t reg, uint8_t *pBuf, uint16_t len)
 {
-    wire->begin();
-    wire->beginTransmission(_addr);
-    wire->write(reg);
+    _wire->begin();
+    _wire->beginTransmission(_addr);
+    _wire->write(reg);
     for(uint16_t i = 0; i < len; i ++)
-        wire->write(pBuf[i]);
-    wire->endTransmission();
+        _wire->write(pBuf[i]);
+    _wire->endTransmission();
 }
 
 void DFRobot_BMX160::readReg(uint8_t reg, uint8_t *pBuf, uint16_t len)
 {
-    wire->begin();
-    wire->beginTransmission(_addr);
-    wire->write(reg);
-    if(wire->endTransmission() != 0)
+    _wire->begin();
+    _wire->beginTransmission(_addr);
+    _wire->write(reg);
+    if(_wire->endTransmission() != 0)
         return;
-    wire->requestFrom(_addr, (uint8_t) len);
+    _wire->requestFrom(_addr, (uint8_t) len);
     for(uint16_t i = 0; i < len; i ++) {
-        pBuf[i] = wire->read();
+        pBuf[i] = _wire->read();
     }
-    wire->endTransmission();
+    _wire->endTransmission();
 }
 
 bool DFRobot_BMX160::scan()
 {
-    wire->beginTransmission(_addr);
-    if (wire->endTransmission() == 0){
+    _wire->beginTransmission(_addr);
+    if (_wire->endTransmission() == 0){
         return true;
     }
     return false;
+}
+
+Adafruit_BMX160::Adafruit_BMX160(int32_t sensorID, uint8_t address, TwoWire *theWire) : DFRobot_BMX160(sensorID, address, theWire){
+    _sensorID = sensorID;
+    _address = address;
+    _wire = theWire;
+}
+
+bool Adafruit_BMX160::getEvent(sensors_event_t *event) {
+    /* Clear the event */
+    memset(event, 0, sizeof(sensors_event_t));
+
+    event->version = sizeof(sensors_event_t);
+    event->sensor_id = _sensorID;
+    event->type = SENSOR_TYPE_ORIENTATION;
+    event->timestamp = millis();
+
+    bmx160SensorData magn, gyro, accel;
+    getAllData(&magn, &gyro, &accel);
+
+    event->magnetic.x = magn.x;
+    event->magnetic.y = magn.y;
+    event->magnetic.z = magn.z;
+
+    event->gyro.x = gyro.x;
+    event->gyro.y = gyro.y;
+    event->gyro.z = gyro.z;
+
+    event->acceleration.x = accel.x;
+    event->acceleration.y = accel.y;
+    event->acceleration.z = accel.z;
+
+    return true;
+}
+
+void Adafruit_BMX160::getSensor(sensor_t *sensor) {
+      /* Clear the sensor_t object */
+  memset(sensor, 0, sizeof(sensor_t));
+
+  /* Insert the sensor name in the fixed length char array */
+  strncpy(sensor->name, "BMX160", sizeof(sensor->name) - 1);
+  sensor->name[sizeof(sensor->name) - 1] = 0;
+  sensor->version = 1;
+  sensor->sensor_id = _sensorID;
+  sensor->type = SENSOR_TYPE_ORIENTATION;
+  sensor->min_delay = 0;
+  sensor->max_value = 0.0F;
+  sensor->min_value = 0.0F;
+  sensor->resolution = 0.01F;
 }
